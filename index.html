@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הביטוחים שלי</title>
+<style>
+  :root {
+    --ink: #1a2b3c;
+    --ink-soft: #5a6b7c;
+    --paper: #f4f1ea;
+    --card: #ffffff;
+    --line: #e3ddd0;
+    --gold: #c9a34e;
+    --teal: #1f7a6b;
+    --coral: #d95d47;
+    --amber: #e0a021;
+    --green: #3f9142;
+    --shadow: 0 2px 4px rgba(26,43,60,.05), 0 8px 24px rgba(26,43,60,.07);
+    --font-display: "Frank Ruhl Libre", "Times New Roman", serif;
+    --font-body: "Assistant", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font-body);
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 60px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+
+  /* Lock screen */
+  .lock {
+    position: fixed; inset: 0; z-index: 100;
+    background: linear-gradient(160deg, #1a2b3c 0%, #22384f 60%, #2d4560 100%);
+    display: grid; place-items: center; padding: 20px;
+  }
+  .lock-card {
+    background: var(--card); border-radius: 20px; padding: 40px 34px 30px;
+    width: 100%; max-width: 360px; text-align: center;
+    box-shadow: 0 24px 70px rgba(0,0,0,.35);
+  }
+  .lock-mark {
+    width: 60px; height: 60px; border-radius: 16px; margin: 0 auto 18px;
+    background: var(--ink); color: var(--gold); display: grid; place-items: center; font-size: 30px;
+  }
+  .lock-card h1 { font-family: var(--font-display); font-size: 26px; font-weight: 700; }
+  .lock-card p { color: var(--ink-soft); font-size: 14px; margin: 4px 0 20px; }
+  .pin-dots { display: flex; justify-content: center; gap: 9px; height: 14px; margin-bottom: 14px; }
+  .pin-dots span { width: 11px; height: 11px; border-radius: 50%; background: var(--line); transition: background .12s ease, transform .12s ease; }
+  .pin-dots span.on { background: var(--gold); transform: scale(1.15); }
+  #pinInput {
+    width: 100%; text-align: center; font-size: 22px; letter-spacing: 8px;
+    font-family: var(--font-body); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #fff;
+  }
+  #pinInput:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,163,78,.18); }
+  #pinInput::placeholder { letter-spacing: normal; font-size: 15px; }
+  .lock-err { color: var(--coral); font-size: 13.5px; font-weight: 600; min-height: 18px; margin: 10px 0 4px; }
+  .lock-btn { width: 100%; padding: 13px; font-size: 16px; margin-top: 6px; }
+  .lock-link {
+    display: block; margin: 14px auto 0; background: none; border: none;
+    color: var(--ink-soft); font-family: var(--font-body); font-size: 13px;
+    text-decoration: underline; cursor: pointer;
+  }
+  .lock-link:hover { color: var(--ink); }
+  .shake { animation: shake .35s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+
+  /* Header */
+  header {
+    background: linear-gradient(180deg, #fbfaf6 0%, var(--paper) 100%);
+    border-bottom: 1px solid var(--line);
+    padding: 26px 0 22px;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-mark {
+    width: 46px; height: 46px; border-radius: 12px;
+    background: var(--ink); color: var(--gold);
+    display: grid; place-items: center; font-size: 24px;
+    box-shadow: var(--shadow);
+  }
+  .brand h1 {
+    font-family: var(--font-display); font-weight: 700;
+    font-size: 30px; letter-spacing: -.5px; line-height: 1;
+  }
+  .brand p { color: var(--ink-soft); font-size: 14px; margin-top: 3px; }
+  .brand-right { margin-inline-start: auto; display: flex; gap: 10px; }
+  .btn {
+    font-family: var(--font-body); font-size: 15px; font-weight: 600;
+    border: none; border-radius: 10px; padding: 11px 18px;
+    cursor: pointer; transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--ink); color: #fff; box-shadow: var(--shadow); }
+  .btn-primary:hover { background: #223a52; }
+  .btn-ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+  .btn-ghost:hover { border-color: var(--ink-soft); }
+  .btn-save { background: var(--teal); color: #fff; box-shadow: var(--shadow); position: relative; }
+  .btn-save:hover { background: #196356; }
+  .btn-save.dirty { background: var(--amber); }
+  .btn-save.dirty:hover { background: #c88a15; }
+  .btn-save.dirty::after {
+    content: ""; position: absolute; top: -3px; inset-inline-end: -3px;
+    width: 10px; height: 10px; border-radius: 50%; background: var(--coral);
+    border: 2px solid #fff;
+  }
+  .btn-save.hidden { display: none; }
+
+  /* Stat strip */
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; margin: 26px 0; }
+  .stat {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px 20px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .stat::before {
+    content: ""; position: absolute; top: 0; inset-inline-start: 0;
+    width: 4px; height: 100%; background: var(--gold);
+  }
+  .stat.teal::before { background: var(--teal); }
+  .stat.coral::before { background: var(--coral); }
+  .stat.amber::before { background: var(--amber); }
+  .stat .label { font-size: 13px; color: var(--ink-soft); font-weight: 600; }
+  .stat .value { font-family: var(--font-display); font-size: 32px; font-weight: 700; margin-top: 6px; line-height: 1; }
+  .stat .sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 6px; }
+
+  /* Layout */
+  .grid { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 22px; align-items: start; }
+
+  .panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .panel-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 20px; border-bottom: 1px solid var(--line);
+  }
+  .panel-head h2 { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+  .panel-head .count {
+    margin-inline-start: auto; font-size: 13px; font-weight: 700; color: var(--ink-soft);
+    background: var(--paper); border-radius: 20px; padding: 3px 12px;
+  }
+
+  /* Filter chips */
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 20px 4px; }
+  .chip {
+    font-size: 13.5px; font-weight: 600; border: 1px solid var(--line);
+    background: #fff; color: var(--ink-soft); border-radius: 20px;
+    padding: 6px 14px; cursor: pointer; transition: all .12s ease;
+  }
+  .chip:hover { border-color: var(--ink-soft); }
+  .chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  /* Policy list */
+  .plist { padding: 14px 20px 20px; display: flex; flex-direction: column; gap: 12px; }
+  .policy {
+    display: grid; grid-template-columns: 44px minmax(0,1fr) auto; gap: 14px;
+    align-items: center; border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px; transition: box-shadow .12s ease, border-color .12s ease;
+    position: relative;
+  }
+  .policy:hover { box-shadow: var(--shadow); border-color: #d3ccbc; }
+  .pico {
+    width: 44px; height: 44px; border-radius: 11px; display: grid; place-items: center;
+    font-size: 22px; background: var(--paper);
+  }
+  .pmain .pname { font-weight: 700; font-size: 16px; }
+  .pmain .pmeta { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+  .pmeta b { color: var(--ink); font-weight: 700; }
+  .pright { text-align: end; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .pill {
+    font-size: 12px; font-weight: 700; border-radius: 20px; padding: 4px 11px; white-space: nowrap;
+  }
+  .pill.ok { background: #e8f4e9; color: var(--green); }
+  .pill.soon { background: #fdf1d8; color: #a5761a; }
+  .pill.urgent { background: #fbe4df; color: var(--coral); }
+  .pill.expired { background: #efe9e2; color: var(--ink-soft); }
+  .prow-actions { display: flex; gap: 6px; }
+  .icon-btn {
+    border: 1px solid var(--line); background: #fff; border-radius: 8px;
+    width: 30px; height: 30px; cursor: pointer; font-size: 14px; color: var(--ink-soft);
+    display: grid; place-items: center; transition: all .12s ease;
+  }
+  .icon-btn:hover { border-color: var(--ink-soft); color: var(--ink); }
+  .icon-btn.renew:hover { background: var(--teal); color: #fff; border-color: var(--teal); }
+  .icon-btn.del:hover { background: var(--coral); color: #fff; border-color: var(--coral); }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--ink-soft); }
+  .empty .big { font-size: 40px; margin-bottom: 8px; }
+
+  /* Refresh reminder banner */
+  .refresh-banner {
+    display: flex; align-items: center; gap: 14px;
+    background: linear-gradient(90deg, #fdf7e8, #fbf3dd);
+    border: 1px solid #ecdcb0; border-inline-start: 4px solid var(--gold);
+    border-radius: 12px; padding: 14px 18px; margin-top: 24px;
+    box-shadow: var(--shadow);
+  }
+  .refresh-banner .rb-ico { font-size: 24px; flex: none; }
+  .refresh-banner .rb-txt { flex: 1; font-size: 14px; }
+  .refresh-banner .rb-txt b { font-weight: 700; }
+  .refresh-banner .rb-txt span { color: var(--ink-soft); display: block; font-size: 13px; margin-top: 2px; }
+  .refresh-banner .rb-actions { display: flex; gap: 8px; flex: none; }
+  .refresh-banner .btn { padding: 8px 14px; font-size: 13.5px; }
+  .refresh-banner.done {
+    background: #e8f4e9; border-color: #bcdcbe; border-inline-start-color: var(--green);
+  }
+  .load-banner {
+    display: flex; align-items: center; gap: 14px;
+    background: linear-gradient(90deg, #e8f3f1, #dcefeb);
+    border: 1px solid #b7dcd4; border-inline-start: 4px solid var(--teal);
+    border-radius: 12px; padding: 14px 18px; margin-top: 24px; box-shadow: var(--shadow);
+  }
+  .load-banner .lb-ico { font-size: 24px; flex: none; }
+  .load-banner .lb-txt { flex: 1; font-size: 14px; }
+  .load-banner .lb-txt b { font-weight: 700; }
+  .load-banner .lb-txt span { color: var(--ink-soft); display: block; font-size: 13px; margin-top: 2px; }
+  .load-banner .lb-actions { display: flex; gap: 8px; flex: none; }
+  .load-banner .btn { padding: 8px 14px; font-size: 13.5px; }
+
+  /* Import area */
+  .import-drop {
+    border: 2px dashed var(--line); border-radius: 12px; padding: 26px 18px;
+    text-align: center; color: var(--ink-soft); cursor: pointer; transition: all .12s ease;
+  }
+  .import-drop:hover, .import-drop.drag { border-color: var(--gold); background: #fdf9f0; color: var(--ink); }
+  .import-drop .big { font-size: 34px; margin-bottom: 8px; }
+  .import-note {
+    font-size: 13px; color: var(--ink-soft); background: var(--paper);
+    border-radius: 10px; padding: 12px 14px; margin-top: 16px; line-height: 1.6;
+  }
+  .import-note code { background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; font-size: 12px; }
+
+  .import-tabs { display: flex; gap: 6px; padding: 12px 24px 0; border-bottom: 1px solid var(--line); }
+  .itab {
+    font-family: var(--font-body); font-size: 14.5px; font-weight: 700; color: var(--ink-soft);
+    background: none; border: none; border-bottom: 3px solid transparent;
+    padding: 8px 6px 12px; cursor: pointer; transition: color .12s ease, border-color .12s ease;
+  }
+  .itab:hover { color: var(--ink); }
+  .itab.active { color: var(--ink); border-bottom-color: var(--gold); }
+  #pasteBox {
+    width: 100%; min-height: 130px; font-family: var(--font-body); font-size: 15px;
+    color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 12px 13px;
+    resize: vertical; line-height: 1.6;
+  }
+  #pasteBox:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,163,78,.15); }
+  #pastePreview { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .ppitem {
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 13.5px;
+    display: flex; align-items: center; gap: 10px; background: #fdfcf9;
+  }
+  .ppitem .pp-ico { font-size: 18px; }
+  .ppitem .pp-main b { font-weight: 700; }
+  .ppitem .pp-main span { color: var(--ink-soft); display: block; font-size: 12.5px; }
+
+  /* Sidebar */
+  aside { display: flex; flex-direction: column; gap: 22px; position: sticky; top: 20px; }
+  .side-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+  .side-card h3 { font-family: var(--font-display); font-size: 18px; padding: 15px 18px 0; }
+  .chart-wrap { position: relative; width: 100%; height: clamp(200px, 26vh, 240px); padding: 10px 12px 16px; }
+  .legend { padding: 0 18px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+  .legend-dot { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+  .legend-row .amt { margin-inline-start: auto; font-weight: 700; }
+
+  .alerts { padding: 8px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .alert {
+    border-inline-start: 3px solid var(--amber); background: #fdf9f0;
+    border-radius: 8px; padding: 10px 12px; font-size: 13.5px;
+  }
+  .alert.urgent { border-color: var(--coral); background: #fdf3f1; }
+  .alert.expired { border-color: var(--ink-soft); background: #f4f1ea; }
+  .alert b { display: block; margin-bottom: 2px; }
+  .alert span { color: var(--ink-soft); }
+
+  /* Modal */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(26,43,60,.45);
+    display: none; place-items: center; z-index: 50; padding: 20px;
+    backdrop-filter: blur(3px);
+  }
+  .overlay.show { display: grid; }
+  .modal {
+    background: var(--card); border-radius: 16px; width: 100%; max-width: 520px;
+    max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(26,43,60,.3);
+    animation: pop .18s ease;
+  }
+  @keyframes pop { from { transform: scale(.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal-head { padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; }
+  .modal-head h2 { font-family: var(--font-display); font-size: 22px; }
+  .modal-head .x { margin-inline-start: auto; }
+  .modal-body { padding: 22px 24px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13.5px; font-weight: 700; margin-bottom: 6px; }
+  .field input, .field select {
+    width: 100%; font-family: var(--font-body); font-size: 15px; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; background: #fff;
+  }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,163,78,.15); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .modal-foot { padding: 16px 24px 22px; display: flex; gap: 10px; }
+  .modal-foot .btn { flex: 1; }
+
+  @media (max-width: 860px) {
+    .stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid { grid-template-columns: 1fr; }
+    aside { position: static; }
+    .brand h1 { font-size: 24px; }
+  }
+  @media print {
+    header .brand-right, .filters, .prow-actions, .brand-right { display: none; }
+    .policy { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<!-- Lock screen -->
+<div class="lock" id="lockScreen">
+  <div class="lock-card">
+    <div class="lock-mark">◈</div>
+    <h1 id="lockTitle">הביטוחים שלי</h1>
+    <p id="lockSub">הזינו קוד גישה</p>
+    <div class="pin-dots" id="pinDots"></div>
+    <input type="password" inputmode="numeric" id="pinInput" maxlength="8" autocomplete="off" placeholder="קוד (4-8 ספרות)">
+    <div class="lock-err" id="lockErr"></div>
+    <button class="btn btn-primary lock-btn" id="pinSubmit">כניסה</button>
+    <button class="lock-link" id="pinForgot">שכחתי את הקוד</button>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+<header>
+  <div class="wrap brand">
+    <div class="brand-mark">◈</div>
+    <div>
+      <h1>הביטוחים שלי</h1>
+      <p>מעקב, חידוש וניהול עלויות הפוליסות שלך</p>
+    </div>
+    <div class="brand-right">
+      <button class="btn btn-ghost" id="lockNowBtn" title="נעילה">🔒</button>
+      <button class="btn btn-save" id="quickSaveBtn" title="שמירת שינויים לקובץ">💾 שמירה מהירה</button>
+      <button class="btn btn-ghost" id="downloadAppBtn">שמירת קובץ אפליקציה</button>
+      <button class="btn btn-ghost" id="importBtn">ייבוא מקובץ</button>
+      <button class="btn btn-ghost" id="exportBtn">ייצוא CSV</button>
+      <button class="btn btn-primary" id="addBtn">+ פוליסה חדשה</button>
+    </div>
+    <input type="file" id="fileInput" accept=".csv,text/csv" style="display:none">
+    <input type="file" id="dataInput" accept=".json,application/json" style="display:none">
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="loadDataBanner"></div>
+  <div id="refreshBanner"></div>
+  <div class="stats" id="stats"></div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>הפוליסות שלי</h2>
+        <span class="count" id="listCount">0</span>
+      </div>
+      <div class="filters" id="filters"></div>
+      <div class="plist" id="plist"></div>
+    </div>
+
+    <aside>
+      <div class="side-card">
+        <h3>התפלגות עלויות שנתית</h3>
+        <div class="chart-wrap"><canvas id="costChart"></canvas></div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="side-card">
+        <h3>התראות חידוש</h3>
+        <div class="alerts" id="alerts"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">פוליסה חדשה</h2>
+      <button class="icon-btn x" id="closeModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="fId">
+      <div class="field">
+        <label for="fName">שם הפוליסה</label>
+        <input type="text" id="fName" placeholder="למשל: ביטוח רכב טויוטה">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="fType">סוג ביטוח</label>
+          <select id="fType">
+            <option value="car">רכב</option>
+            <option value="home">דירה ותכולה</option>
+            <option value="health">בריאות וחיים</option>
+            <option value="business">עסקי / אחר</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fCompany">חברת ביטוח</label>
+          <input type="text" id="fCompany" placeholder="למשל: הראל">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="fCost">פרמיה שנתית (₪)</label>
+          <input type="number" id="fCost" min="0" step="1" placeholder="0">
+        </div>
+        <div class="field">
+          <label for="fAgent">סוכן / טלפון</label>
+          <input type="text" id="fAgent" placeholder="שם או טלפון">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="fStart">תאריך התחלה</label>
+          <input type="date" id="fStart">
+        </div>
+        <div class="field">
+          <label for="fEnd">תאריך סיום / חידוש</label>
+          <input type="date" id="fEnd">
+        </div>
+      </div>
+      <div class="field">
+        <label for="fPolicy">מספר פוליסה (אופציונלי)</label>
+        <input type="text" id="fPolicy" placeholder="מספר פוליסה">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cancelBtn">ביטול</button>
+      <button class="btn btn-primary" id="saveBtn">שמירה</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="overlay" id="importOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>ייבוא פוליסות</h2>
+      <button class="icon-btn x" id="closeImport">✕</button>
+    </div>
+    <div class="import-tabs">
+      <button class="itab active" data-tab="file">מקובץ CSV</button>
+      <button class="itab" data-tab="paste">הדבקת טקסט</button>
+    </div>
+    <div class="modal-body">
+      <div id="tab-file">
+        <div class="import-drop" id="importDrop">
+          <div class="big">📥</div>
+          <b>גררו לכאן קובץ CSV</b> או לחצו לבחירה
+        </div>
+        <div class="import-note">
+          ייצאו דוח מרוכז מ<b>"הר הביטוח"</b> של משרד האוצר או מהיועץ שלכם, ושמרו אותו כקובץ CSV.<br>
+          עמודות נתמכות (לפי הסדר): <code>שם, סוג, חברה, פרמיה שנתית, סוכן, התחלה, סיום, מספר פוליסה</code>.<br>
+          אפשר גם להשתמש בקובץ שיוצא מכפתור "ייצוא נתונים" — הוא מיובא חזרה כמו שהוא.
+        </div>
+      </div>
+      <div id="tab-paste" style="display:none">
+        <div class="field">
+          <label for="pasteBox">הדביקו טקסט מדוח הפוליסה</label>
+          <textarea id="pasteBox" placeholder="הדביקו כאן טקסט חופשי, למשל:&#10;ביטוח רכב, הראל, פרמיה 3,800 ₪, בתוקף עד 15/03/2027"></textarea>
+        </div>
+        <div class="import-note">
+          המערכת תנסה לזהות אוטומטית <b>חברת ביטוח</b>, <b>סכום פרמיה</b>, <b>תאריך חידוש</b> ו<b>סוג ביטוח</b> מהטקסט.<br>
+          אפשר להדביק כמה פוליסות — <b>שורה נפרדת לכל אחת</b>. תמיד אפשר לתקן ידנית אחרי הזיהוי.
+        </div>
+        <div id="pastePreview"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cancelImport">סגירה</button>
+      <button class="btn btn-primary" id="pickFileBtn">בחירת קובץ</button>
+      <button class="btn btn-primary" id="analyzePasteBtn" style="display:none">זיהוי וייבוא</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /#app -->
+
+<script src="https://artifactcdn.diabrowser.engineering/ajax/libs/Chart.js/chart.umd.js"></script>
+<script>
+const TYPES = {
+  car:      { label: "רכב",           icon: "🚗", color: "#1f7a6b" },
+  home:     { label: "דירה ותכולה",   icon: "🏠", color: "#c9a34e" },
+  health:   { label: "בריאות וחיים",  icon: "❤️", color: "#d95d47" },
+  business: { label: "עסקי / אחר",    icon: "💼", color: "#4a6fa5" },
+};
+const STORE_KEY = "insurance_tracker_v1";
+const REFRESH_KEY = "insurance_tracker_refresh_v1";
+const PIN_KEY = "insurance_tracker_pin_v1";
+const REFRESH_INTERVAL_DAYS = 90;
+let policies = [];
+let filter = "all";
+let chart = null;
+
+/* ---------- environment: local file vs online ---------- */
+// Online (https/http host) = "zero-persistence" privacy mode: nothing is saved
+// to the browser. Data lives only in the loaded file, in memory. Local file
+// (file://) keeps the convenient localStorage behavior.
+const ONLINE = location.protocol === "http:" || location.protocol === "https:";
+let dirty = false;
+
+/* ---------- storage ---------- */
+function load() {
+  if (ONLINE) { policies = []; return; }
+  try { policies = JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
+  catch { policies = []; }
+}
+function save() {
+  if (ONLINE) { markDirty(); return; }
+  localStorage.setItem(STORE_KEY, JSON.stringify(policies));
+}
+function markDirty() { dirty = true; updateSaveIndicator(); }
+function markClean() { dirty = false; updateSaveIndicator(); }
+function id() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+/* ---------- date helpers ---------- */
+function daysUntil(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((d - now) / 86400000);
+}
+function fmtDate(dateStr) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("he-IL", { day: "numeric", month: "short", year: "numeric" });
+}
+function nis(n) { return "₪" + Number(n||0).toLocaleString("he-IL"); }
+
+function statusOf(p) {
+  const d = daysUntil(p.end);
+  if (d < 0) return { key: "expired", label: "פג תוקף", cls: "expired" };
+  if (d <= 14) return { key: "urgent", label: `${d} ימים לחידוש`, cls: "urgent" };
+  if (d <= 45) return { key: "soon", label: `${d} ימים לחידוש`, cls: "soon" };
+  return { key: "ok", label: "בתוקף", cls: "ok" };
+}
+
+/* ---------- render ---------- */
+function renderStats() {
+  const total = policies.reduce((s,p)=>s+Number(p.cost||0),0);
+  const active = policies.filter(p=>daysUntil(p.end) >= 0).length;
+  const soon = policies.filter(p=>{const d=daysUntil(p.end);return d>=0&&d<=45;}).length;
+  const expired = policies.filter(p=>daysUntil(p.end) < 0).length;
+  document.getElementById("stats").innerHTML = `
+    <div class="stat teal"><div class="label">פוליסות פעילות</div><div class="value">${active}</div><div class="sub">מתוך ${policies.length} סה"כ</div></div>
+    <div class="stat"><div class="label">עלות שנתית כוללת</div><div class="value">${nis(total)}</div><div class="sub">≈ ${nis(Math.round(total/12))} לחודש</div></div>
+    <div class="stat amber"><div class="label">לחידוש בקרוב</div><div class="value">${soon}</div><div class="sub">ב-45 הימים הקרובים</div></div>
+    <div class="stat coral"><div class="label">פג תוקף</div><div class="value">${expired}</div><div class="sub">${expired ? "דורש טיפול" : "הכל מעודכן"}</div></div>`;
+}
+
+function renderFilters() {
+  const counts = { all: policies.length };
+  Object.keys(TYPES).forEach(t => counts[t] = policies.filter(p=>p.type===t).length);
+  let html = `<span class="chip ${filter==='all'?'active':''}" data-f="all">הכל (${counts.all})</span>`;
+  Object.entries(TYPES).forEach(([k,v]) => {
+    html += `<span class="chip ${filter===k?'active':''}" data-f="${k}">${v.icon} ${v.label} (${counts[k]})</span>`;
+  });
+  document.getElementById("filters").innerHTML = html;
+  document.querySelectorAll(".chip").forEach(c => c.onclick = () => { filter = c.dataset.f; renderList(); renderFilters(); });
+}
+
+function renderList() {
+  let list = policies.slice();
+  if (filter !== "all") list = list.filter(p=>p.type===filter);
+  list.sort((a,b)=>daysUntil(a.end)-daysUntil(b.end));
+  document.getElementById("listCount").textContent = list.length;
+  const el = document.getElementById("plist");
+  if (list.length === 0) {
+    el.innerHTML = `<div class="empty"><div class="big">📭</div>אין פוליסות בקטגוריה זו.<br>לחצו על "פוליסה חדשה" כדי להוסיף.</div>`;
+    return;
+  }
+  el.innerHTML = list.map(p => {
+    const t = TYPES[p.type]; const s = statusOf(p);
+    return `<div class="policy">
+      <div class="pico" style="color:${t.color}">${t.icon}</div>
+      <div class="pmain">
+        <div class="pname">${esc(p.name)}</div>
+        <div class="pmeta"><b>${esc(p.company||"—")}</b> · ${t.label} · חידוש ב-${fmtDate(p.end)}${p.agent?` · ${esc(p.agent)}`:""}</div>
+      </div>
+      <div class="pright">
+        <span class="pill ${s.cls}">${s.label}</span>
+        <div style="font-weight:700;font-size:15px">${nis(p.cost)}<span style="font-size:11px;color:var(--ink-soft);font-weight:400"> / שנה</span></div>
+        <div class="prow-actions">
+          <button class="icon-btn renew" title="חדש/עדכן" data-renew="${p.id}">↻</button>
+          <button class="icon-btn" title="עריכה" data-edit="${p.id}">✎</button>
+          <button class="icon-btn del" title="מחיקה" data-del="${p.id}">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+  el.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>openModal(b.dataset.edit));
+  el.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>delPolicy(b.dataset.del));
+  el.querySelectorAll("[data-renew]").forEach(b=>b.onclick=()=>renewPolicy(b.dataset.renew));
+}
+
+function renderChart() {
+  const totals = {}; Object.keys(TYPES).forEach(t=>totals[t]=0);
+  policies.forEach(p=>totals[p.type]+=Number(p.cost||0));
+  const labels = [], data = [], colors = [];
+  Object.entries(TYPES).forEach(([k,v])=>{ if(totals[k]>0){ labels.push(v.label); data.push(totals[k]); colors.push(v.color); } });
+  const legend = document.getElementById("legend");
+  const grand = data.reduce((s,n)=>s+n,0);
+  if (grand === 0) { legend.innerHTML = `<div style="color:var(--ink-soft);font-size:13.5px">אין נתוני עלות עדיין.</div>`; if(chart){chart.destroy();chart=null;} return; }
+  legend.innerHTML = labels.map((l,i)=>`<div class="legend-row"><span class="legend-dot" style="background:${colors[i]}"></span>${l}<span class="amt">${nis(data[i])}</span></div>`).join("");
+  const ctx = document.getElementById("costChart");
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: "doughnut",
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: "#fff", borderWidth: 3 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: "62%",
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (c)=>` ${c.label}: ${nis(c.parsed)} (${Math.round(c.parsed/grand*100)}%)` } }
+      }
+    }
+  });
+}
+
+function renderAlerts() {
+  const upcoming = policies
+    .map(p=>({p, d:daysUntil(p.end)}))
+    .filter(x=>x.d <= 45)
+    .sort((a,b)=>a.d-b.d);
+  const el = document.getElementById("alerts");
+  if (upcoming.length === 0) {
+    el.innerHTML = `<div style="color:var(--ink-soft);font-size:13.5px">✓ אין חידושים דחופים. הכל תחת שליטה.</div>`;
+    return;
+  }
+  el.innerHTML = upcoming.map(({p,d})=>{
+    let cls = "", msg = "";
+    if (d < 0) { cls="expired"; msg=`פג תוקף לפני ${Math.abs(d)} ימים`; }
+    else if (d === 0) { cls="urgent"; msg="פג תוקף היום!"; }
+    else if (d <= 14) { cls="urgent"; msg=`חידוש בעוד ${d} ימים`; }
+    else { cls=""; msg=`חידוש בעוד ${d} ימים`; }
+    return `<div class="alert ${cls}"><b>${TYPES[p.type].icon} ${esc(p.name)}</b><span>${msg} · ${fmtDate(p.end)} · ${esc(p.company||"")}</span></div>`;
+  }).join("");
+}
+
+function renderAll() { renderStats(); renderFilters(); renderList(); renderChart(); renderAlerts(); renderRefresh(); renderLoadBanner(); updateSaveIndicator(); }
+
+/* ---------- data file (JSON) save / load ---------- */
+function updateSaveIndicator() {
+  const btn = document.getElementById("quickSaveBtn");
+  if (!btn) return;
+  // quick-save is only meaningful in online (zero-persistence) mode
+  btn.classList.toggle("hidden", !ONLINE);
+  btn.classList.toggle("dirty", ONLINE && dirty);
+  btn.textContent = dirty ? "💾 שמירה מהירה •" : "💾 שמירה מהירה";
+}
+function saveDataFile(quiet) {
+  const payload = {
+    app: "insurance-tracker",
+    version: 1,
+    savedAt: new Date().toISOString(),
+    policies: policies,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "insurance-data.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  markRefreshed();
+  markClean();
+  if (quiet !== true) {
+    alert("קובץ הנתונים נשמר בשם insurance-data.json.\nשמרו אותו באותה תיקייה של קובץ האפליקציה.\nבפתיחה הבאה טענו אותו בקליק אחד מהבאנר למעלה.");
+  }
+}
+
+function loadDataFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let data;
+    try { data = JSON.parse(e.target.result); }
+    catch { alert("הקובץ אינו קובץ נתונים תקין (JSON)."); return; }
+    const arr = Array.isArray(data) ? data : data.policies;
+    if (!Array.isArray(arr)) { alert("לא נמצאו פוליסות בקובץ."); return; }
+    const clean = arr.filter(p => p && p.name && p.end).map(p => ({
+      id: p.id || id(),
+      name: String(p.name),
+      type: TYPES[p.type] ? p.type : "business",
+      company: p.company || "",
+      cost: Number(p.cost) || 0,
+      agent: p.agent || "",
+      start: p.start || "",
+      end: p.end,
+      policyNo: p.policyNo || "",
+    }));
+    policies = clean;
+    save(); renderAll(); markRefreshed(); markClean();
+    alert(`נטענו ${clean.length} פוליסות מקובץ הנתונים.`);
+  };
+  reader.onerror = () => alert("שגיאה בקריאת הקובץ.");
+  reader.readAsText(file);
+}
+
+function renderLoadBanner() {
+  const el = document.getElementById("loadDataBanner");
+  if (policies.length > 0) { el.innerHTML = ""; return; }
+  const sub = ONLINE
+    ? `מצב פרטי: שום נתון לא נשמר על הדף. טענו את קובץ הנתונים (<code>insurance-data.json</code>) מהמחשב, או הוסיפו פוליסה ידנית.`
+    : `טענו את קובץ הנתונים (<code>insurance-data.json</code>) שמור באותה תיקייה, או הוסיפו פוליסה ידנית.`;
+  el.innerHTML = `<div class="load-banner">
+    <div class="lb-ico">🔒</div>
+    <div class="lb-txt"><b>אין נתונים טעונים כרגע.</b>
+    <span>${sub}</span></div>
+    <div class="lb-actions"><button class="btn btn-primary" id="lbLoad">טעינת קובץ נתונים</button></div>
+  </div>`;
+  document.getElementById("lbLoad").onclick = () => document.getElementById("dataInput").click();
+}
+
+/* ---------- refresh reminder ---------- */
+function lastRefresh() {
+  const v = localStorage.getItem(REFRESH_KEY);
+  return v ? new Date(v) : null;
+}
+function markRefreshed() {
+  localStorage.setItem(REFRESH_KEY, new Date().toISOString());
+  renderRefresh();
+}
+function renderRefresh() {
+  const el = document.getElementById("refreshBanner");
+  const last = lastRefresh();
+  const now = new Date();
+  let days = last ? Math.floor((now - last) / 86400000) : null;
+  const due = days === null || days >= REFRESH_INTERVAL_DAYS;
+  if (!due) {
+    const left = REFRESH_INTERVAL_DAYS - days;
+    el.innerHTML = `<div class="refresh-banner done">
+      <div class="rb-ico">✓</div>
+      <div class="rb-txt"><b>הנתונים עודכנו לאחרונה לפני ${days === 0 ? "היום" : days + " ימים"}.</b>
+      <span>התזכורת הבאה לרענון מהר הביטוח בעוד ${left} ימים.</span></div>
+    </div>`;
+    return;
+  }
+  const msg = last
+    ? `עברו ${days} ימים מאז העדכון האחרון.`
+    : `כדאי לוודא שהנתונים מעודכנים.`;
+  el.innerHTML = `<div class="refresh-banner">
+    <div class="rb-ico">🔔</div>
+    <div class="rb-txt"><b>הגיע הזמן לרענן את הנתונים.</b>
+    <span>${msg} הפיקו דוח מרוכז מהר הביטוח או מהיועץ, ייבאו אותו, וסמנו כמעודכן.</span></div>
+    <div class="rb-actions">
+      <button class="btn btn-ghost" id="rbImport">ייבוא</button>
+      <button class="btn btn-primary" id="rbDone">סימון כמעודכן</button>
+    </div>
+  </div>`;
+  document.getElementById("rbImport").onclick = openImport;
+  document.getElementById("rbDone").onclick = markRefreshed;
+}
+
+/* ---------- actions ---------- */
+function openModal(editId) {
+  const o = document.getElementById("overlay");
+  document.getElementById("fId").value = "";
+  ["fName","fCompany","fCost","fAgent","fStart","fEnd","fPolicy"].forEach(i=>document.getElementById(i).value="");
+  document.getElementById("fType").value = "car";
+  document.getElementById("modalTitle").textContent = "פוליסה חדשה";
+  if (editId) {
+    const p = policies.find(x=>x.id===editId);
+    if (p) {
+      document.getElementById("modalTitle").textContent = "עריכת פוליסה";
+      document.getElementById("fId").value = p.id;
+      document.getElementById("fName").value = p.name||"";
+      document.getElementById("fType").value = p.type||"car";
+      document.getElementById("fCompany").value = p.company||"";
+      document.getElementById("fCost").value = p.cost||"";
+      document.getElementById("fAgent").value = p.agent||"";
+      document.getElementById("fStart").value = p.start||"";
+      document.getElementById("fEnd").value = p.end||"";
+      document.getElementById("fPolicy").value = p.policyNo||"";
+    }
+  }
+  o.classList.add("show");
+  setTimeout(()=>document.getElementById("fName").focus(), 50);
+}
+function closeModal() { document.getElementById("overlay").classList.remove("show"); }
+
+function savePolicy() {
+  const name = document.getElementById("fName").value.trim();
+  const end = document.getElementById("fEnd").value;
+  if (!name) { alert("נא להזין שם פוליסה."); return; }
+  if (!end) { alert("נא להזין תאריך סיום / חידוש."); return; }
+  const rec = {
+    id: document.getElementById("fId").value || id(),
+    name,
+    type: document.getElementById("fType").value,
+    company: document.getElementById("fCompany").value.trim(),
+    cost: Number(document.getElementById("fCost").value) || 0,
+    agent: document.getElementById("fAgent").value.trim(),
+    start: document.getElementById("fStart").value,
+    end,
+    policyNo: document.getElementById("fPolicy").value.trim(),
+  };
+  const idx = policies.findIndex(p=>p.id===rec.id);
+  if (idx >= 0) policies[idx] = rec; else policies.push(rec);
+  save(); renderAll(); closeModal();
+}
+
+function delPolicy(pid) {
+  const p = policies.find(x=>x.id===pid);
+  if (!p) return;
+  if (confirm(`למחוק את "${p.name}"?`)) { policies = policies.filter(x=>x.id!==pid); save(); renderAll(); }
+}
+
+function renewPolicy(pid) {
+  const p = policies.find(x=>x.id===pid);
+  if (!p) return;
+  if (!confirm(`לחדש את "${p.name}" לשנה נוספת?\nתאריך הסיום יידחה ב-12 חודשים.`)) return;
+  const s = p.end ? new Date(p.end + "T00:00:00") : new Date();
+  const e = new Date(s); e.setFullYear(e.getFullYear()+1);
+  p.start = p.end || s.toISOString().slice(0,10);
+  p.end = e.toISOString().slice(0,10);
+  save(); renderAll();
+}
+
+function exportData() {
+  const rows = [["שם","סוג","חברה","פרמיה שנתית","סוכן","התחלה","סיום","מספר פוליסה"]];
+  policies.forEach(p=>rows.push([p.name, TYPES[p.type].label, p.company, p.cost, p.agent, p.start, p.end, p.policyNo]));
+  const csv = "﻿" + rows.map(r=>r.map(c=>`"${String(c??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "insurance-policies.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function esc(s) { return String(s??"").replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+
+/* ---------- import from CSV ---------- */
+function openImport() { switchTab("file"); document.getElementById("importOverlay").classList.add("show"); }
+function closeImport() { document.getElementById("importOverlay").classList.remove("show"); }
+
+function parseCSV(text) {
+  text = text.replace(/^﻿/, "");
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i+1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else {
+      if (c === '"') q = true;
+      else if (c === ",") { row.push(cell); cell = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i+1] === "\n") i++;
+        row.push(cell); rows.push(row); row = []; cell = "";
+      } else cell += c;
+    }
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(v => v.trim() !== ""));
+}
+
+const TYPE_ALIASES = {
+  "רכב": "car", "car": "car", "חובה": "car", "מקיף": "car", "אופנוע": "car",
+  "דירה": "home", "דירה ותכולה": "home", "home": "home", "תכולה": "home", "מבנה": "home",
+  "בריאות": "health", "בריאות וחיים": "health", "health": "health", "חיים": "health", "סיעוד": "health", "בריאות וסיעוד": "health",
+  "עסקי": "business", "עסק": "business", "business": "business", "אחר": "business", "נסיעות": "business", "אחריות": "business",
+};
+function normType(s) {
+  const t = String(s||"").trim().toLowerCase();
+  for (const [k,v] of Object.entries(TYPE_ALIASES)) if (t.includes(k.toLowerCase())) return v;
+  return "business";
+}
+function parseDate(s) {
+  s = String(s||"").trim();
+  if (!s) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{2,4})$/); // DD/MM/YYYY
+  if (m) {
+    let [_, d, mo, y] = m;
+    if (y.length === 2) y = "20" + y;
+    return `${y}-${mo.padStart(2,"0")}-${d.padStart(2,"0")}`;
+  }
+  const dt = new Date(s);
+  return isNaN(dt) ? "" : dt.toISOString().slice(0,10);
+}
+function parseCost(s) { return Number(String(s||"").replace(/[^\d.]/g, "")) || 0; }
+
+function importFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const rows = parseCSV(e.target.result);
+    if (rows.length === 0) { alert("הקובץ ריק או לא נקרא."); return; }
+    // skip header if first cell isn't a date and looks like a label
+    let start = 0;
+    const first = rows[0].map(c=>c.trim().toLowerCase());
+    if (first.some(c => ["שם","name","סוג","type","חברה"].includes(c))) start = 1;
+    let added = 0, skipped = 0;
+    for (let i = start; i < rows.length; i++) {
+      const r = rows[i];
+      const name = (r[0]||"").trim();
+      const end = parseDate(r[6]);
+      if (!name || !end) { skipped++; continue; }
+      policies.push({
+        id: id(),
+        name,
+        type: normType(r[1]),
+        company: (r[2]||"").trim(),
+        cost: parseCost(r[3]),
+        agent: (r[4]||"").trim(),
+        start: parseDate(r[5]),
+        end,
+        policyNo: (r[7]||"").trim(),
+      });
+      added++;
+    }
+    save(); renderAll(); closeImport();
+    markRefreshed();
+    alert(`יובאו ${added} פוליסות בהצלחה.${skipped ? `\n${skipped} שורות דולגו (חסר שם או תאריך סיום).` : ""}`);
+  };
+  reader.onerror = () => alert("שגיאה בקריאת הקובץ.");
+  reader.readAsText(file);
+}
+
+/* ---------- import from pasted text ---------- */
+const COMPANIES = ["הראל","מגדל","כלל","מנורה","הפניקס","איילון","ביטוח ישיר","AIG","הכשרה","שלמה","שירביט","הראל ביטוח","מגדל ביטוח","clal","harel","migdal","phoenix","menora"];
+const HE_MONTHS = { "ינואר":1,"פברואר":2,"מרץ":3,"אפריל":4,"מאי":5,"יוני":6,"יולי":7,"אוגוסט":8,"ספטמבר":9,"אוקטובר":10,"נובמבר":11,"דצמבר":12 };
+
+function extractDate(line) {
+  let m = line.match(/(\d{1,2})[./\-](\d{1,2})[./\-](\d{2,4})/);
+  if (m) {
+    let [_, d, mo, y] = m;
+    if (y.length === 2) y = "20" + y;
+    return `${y}-${mo.padStart(2,"0")}-${d.padStart(2,"0")}`;
+  }
+  m = line.match(/(\d{1,2})\s+(ב?)(ינואר|פברואר|מרץ|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר)\s+(\d{4})/);
+  if (m) { const d=m[1], mo=HE_MONTHS[m[3]], y=m[4]; return `${y}-${String(mo).padStart(2,"0")}-${d.padStart(2,"0")}`; }
+  return "";
+}
+function extractCost(line) {
+  const m = line.match(/(?:₪|ש"?ח|פרמיה|עלות|סכום)[^\d]*?([\d,]+(?:\.\d+)?)|([\d,]{3,}(?:\.\d+)?)\s*(?:₪|ש"?ח)/);
+  if (m) return Number((m[1]||m[2]||"").replace(/,/g,"")) || 0;
+  return 0;
+}
+function extractCompany(line) {
+  const low = line.toLowerCase();
+  for (const c of COMPANIES) if (low.includes(c.toLowerCase())) return c.replace(/\b\w/g, ch=>ch.toUpperCase()).length ? c : c;
+  return "";
+}
+function analyzePasteLine(line) {
+  const type = normType(line);
+  const cost = extractCost(line);
+  const end = extractDate(line);
+  const company = extractCompany(line);
+  // name = leading words before first comma / company / number
+  let name = line.split(/[,،]/)[0].trim();
+  if (name.length > 40) name = name.slice(0, 40).trim();
+  if (!name) name = TYPES[type].label;
+  return { name, type, company, cost, end };
+}
+
+let pasteResults = [];
+function runPasteAnalysis() {
+  const raw = document.getElementById("pasteBox").value.trim();
+  const prev = document.getElementById("pastePreview");
+  if (!raw) { pasteResults = []; prev.innerHTML = `<div style="color:var(--ink-soft);font-size:13.5px">הדביקו טקסט למעלה כדי לזהות פוליסות.</div>`; return false; }
+  const lines = raw.split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  pasteResults = lines.map(analyzePasteLine);
+  prev.innerHTML = `<div style="font-size:13px;color:var(--ink-soft);margin-bottom:2px">זוהו ${pasteResults.length} פוליסות:</div>` +
+    pasteResults.map(r=>{
+      const parts = [];
+      if (r.company) parts.push(r.company);
+      if (r.cost) parts.push(nis(r.cost));
+      parts.push(r.end ? "חידוש " + fmtDate(r.end) : "⚠ ללא תאריך חידוש");
+      return `<div class="ppitem"><span class="pp-ico">${TYPES[r.type].icon}</span>
+        <div class="pp-main"><b>${esc(r.name)}</b><span>${parts.join(" · ")}</span></div></div>`;
+    }).join("");
+  return true;
+}
+function commitPaste() {
+  if (pasteResults.length === 0) { alert("אין פוליסות לזיהוי. הדביקו טקסט תחילה."); return; }
+  let missing = 0;
+  const count = pasteResults.length;
+  pasteResults.forEach(r=>{
+    if (!r.end) missing++;
+    policies.push({ id: id(), name: r.name, type: r.type, company: r.company, cost: r.cost, agent: "", start: "", end: r.end, policyNo: "" });
+  });
+  save(); renderAll(); closeImport(); markRefreshed();
+  document.getElementById("pasteBox").value = "";
+  document.getElementById("pastePreview").innerHTML = "";
+  pasteResults = [];
+  alert(`יובאו ${count} פוליסות.${missing ? `\n⚠ ${missing} ללא תאריך חידוש — ערכו אותן ידנית והוסיפו תאריך.` : ""}`);
+}
+
+function switchTab(tab) {
+  document.querySelectorAll(".itab").forEach(t=>t.classList.toggle("active", t.dataset.tab===tab));
+  document.getElementById("tab-file").style.display = tab==="file" ? "" : "none";
+  document.getElementById("tab-paste").style.display = tab==="paste" ? "" : "none";
+  document.getElementById("pickFileBtn").style.display = tab==="file" ? "" : "none";
+  document.getElementById("analyzePasteBtn").style.display = tab==="paste" ? "" : "none";
+}
+
+/* ---------- wire up ---------- */
+document.getElementById("addBtn").onclick = () => openModal();
+document.getElementById("closeModal").onclick = closeModal;
+document.getElementById("cancelBtn").onclick = closeModal;
+document.getElementById("saveBtn").onclick = savePolicy;
+document.getElementById("exportBtn").onclick = exportData;
+document.getElementById("quickSaveBtn").onclick = () => saveDataFile(true);
+const dataInput = document.getElementById("dataInput");
+dataInput.onchange = (e) => { if (e.target.files[0]) loadDataFile(e.target.files[0]); dataInput.value = ""; };
+
+/* lock + download-app wiring */
+document.getElementById("lockNowBtn").onclick = () => {
+  document.getElementById("app").style.display = "none";
+  const inp = document.getElementById("pinInput");
+  inp.value = ""; updatePinDots();
+  document.getElementById("lockErr").textContent = "";
+  document.getElementById("lockScreen").style.display = "grid";
+  initLock();
+};
+// no PIN lock in online zero-persistence mode
+if (ONLINE) document.getElementById("lockNowBtn").style.display = "none";
+
+// warn before leaving with unsaved changes (online mode only)
+window.addEventListener("beforeunload", (e) => {
+  if (ONLINE && dirty) { e.preventDefault(); e.returnValue = ""; }
+});
+document.getElementById("downloadAppBtn").onclick = () => {
+  const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "insurance-app.html";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  alert("קובץ האפליקציה הורד בשם insurance-app.html.\nשמרו אותו במקום קבוע ופתחו בדאבל-קליק.\n\nאת הנתונים שמרו בנפרד עם 'שמירת נתונים לקובץ' (insurance-data.json) באותה תיקייה, וטענו אותם בקליק אחד בכל פתיחה.");
+};
+
+/* import wiring */
+const fileInput = document.getElementById("fileInput");
+document.getElementById("importBtn").onclick = openImport;
+document.getElementById("closeImport").onclick = closeImport;
+document.getElementById("cancelImport").onclick = closeImport;
+document.getElementById("pickFileBtn").onclick = () => fileInput.click();
+document.getElementById("importDrop").onclick = () => fileInput.click();
+fileInput.onchange = (e) => { if (e.target.files[0]) importFile(e.target.files[0]); fileInput.value = ""; };
+const drop = document.getElementById("importDrop");
+drop.addEventListener("dragover", (e)=>{ e.preventDefault(); drop.classList.add("drag"); });
+drop.addEventListener("dragleave", ()=>drop.classList.remove("drag"));
+drop.addEventListener("drop", (e)=>{ e.preventDefault(); drop.classList.remove("drag"); if (e.dataTransfer.files[0]) importFile(e.dataTransfer.files[0]); });
+document.getElementById("importOverlay").onclick = (e) => { if (e.target.id === "importOverlay") closeImport(); };
+
+/* paste tab wiring */
+document.querySelectorAll(".itab").forEach(t=>t.onclick = () => switchTab(t.dataset.tab));
+document.getElementById("pasteBox").addEventListener("input", runPasteAnalysis);
+document.getElementById("analyzePasteBtn").onclick = () => { if (runPasteAnalysis()) commitPaste(); };
+document.getElementById("overlay").onclick = (e) => { if (e.target.id === "overlay") closeModal(); };
+document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") { closeModal(); closeImport(); } });
+
+load();
+// one-time cleanup of previously seeded sample data (local mode only)
+if (!ONLINE && !localStorage.getItem("insurance_tracker_cleared_v1")) {
+  localStorage.setItem("insurance_tracker_cleared_v1", "1");
+  policies = [];
+  save();
+}
+
+/* ---------- PIN lock ---------- */
+async function hashPin(pin) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("mgn::" + pin));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+function startApp() {
+  document.getElementById("lockScreen").style.display = "none";
+  document.getElementById("app").style.display = "";
+  renderAll();
+}
+function updatePinDots() {
+  const n = document.getElementById("pinInput").value.length;
+  document.getElementById("pinDots").innerHTML = Array.from({length: Math.max(n,0)}, ()=>`<span class="on"></span>`).join("") || "";
+}
+function shakeLock() {
+  const c = document.querySelector(".lock-card");
+  c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake");
+}
+async function submitPin() {
+  const input = document.getElementById("pinInput");
+  const pin = input.value.trim();
+  const err = document.getElementById("lockErr");
+  const stored = localStorage.getItem(PIN_KEY);
+  if (pin.length < 4) { err.textContent = "הקוד חייב להכיל לפחות 4 ספרות."; shakeLock(); return; }
+  const h = await hashPin(pin);
+  if (!stored) {
+    localStorage.setItem(PIN_KEY, h);
+    startApp();
+  } else if (h === stored) {
+    err.textContent = "";
+    startApp();
+  } else {
+    err.textContent = "קוד שגוי. נסו שוב.";
+    input.value = ""; updatePinDots(); shakeLock();
+  }
+}
+function initLock() {
+  const stored = localStorage.getItem(PIN_KEY);
+  const sub = document.getElementById("lockSub");
+  sub.textContent = stored ? "הזינו את קוד הגישה שלכם" : "בחרו קוד גישה חדש (4-8 ספרות)";
+  document.getElementById("pinInput").addEventListener("input", updatePinDots);
+  document.getElementById("pinInput").addEventListener("keydown", (e)=>{ if(e.key==="Enter") submitPin(); });
+  document.getElementById("pinSubmit").onclick = submitPin;
+  document.getElementById("pinForgot").onclick = () => {
+    if (confirm("איפוס הקוד ימחק את כל הנתונים השמורים (אין דרך לשחזר בלי הקוד).\n\nאם יש לך גיבוי CSV תוכל לייבא אותו אחר כך.\n\nלהמשיך?")) {
+      localStorage.removeItem(PIN_KEY);
+      localStorage.removeItem(STORE_KEY);
+      policies = [];
+      document.getElementById("pinInput").value = "";
+      document.getElementById("lockErr").textContent = "";
+      updatePinDots();
+      initLock();
+    }
+  };
+  document.getElementById("pinInput").focus();
+}
+
+// Online (zero-persistence) mode: the PIN can't be stored privately and the
+// page holds no data on load, so skip the lock and go straight to the app.
+// Privacy comes from data living only in your file, not from a code.
+if (ONLINE) {
+  startApp();
+} else {
+  initLock();
+}
+</script>
+</body>
+</html>
