@@ -114,6 +114,18 @@
   .menu-item.danger { color: var(--coral); }
   .menu-item.danger:hover { background: #fbe4df; }
   .menu-sep { height: 1px; background: var(--line); margin: 6px 4px; }
+
+  /* Export options */
+  .export-opts { display: flex; flex-direction: column; gap: 10px; }
+  .export-opt {
+    display: flex; align-items: center; gap: 14px; text-align: start;
+    border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+    background: #fff; cursor: pointer; font-family: var(--font-body); transition: all .12s ease;
+  }
+  .export-opt:hover { border-color: var(--gold); background: #fdf9f0; }
+  .export-opt .eo-ico { font-size: 26px; flex: none; }
+  .export-opt b { display: block; font-size: 15px; color: var(--ink); }
+  .export-opt small { color: var(--ink-soft); font-size: 12.5px; }
   .btn-harb {
     background: var(--gold); color: #fff; box-shadow: var(--shadow);
     text-decoration: none; display: inline-flex; align-items: center;
@@ -202,6 +214,8 @@
   }
   .chip:hover { border-color: var(--ink-soft); }
   .chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+  #ownerFilters { padding-bottom: 0; }
+  .chip.owner.active { background: var(--teal); border-color: var(--teal); }
 
   /* Policy list */
   .plist { padding: 14px 20px 20px; display: flex; flex-direction: column; gap: 12px; }
@@ -403,8 +417,9 @@
         <button class="btn btn-ghost" id="menuBtn" aria-haspopup="true" aria-expanded="false">פעולות ▾</button>
         <div class="menu" id="actionsMenu">
           <button class="menu-item" id="importBtn">📥 ייבוא מקובץ</button>
-          <button class="menu-item" id="exportBtn">📤 ייצוא CSV</button>
-          <button class="menu-item" id="downloadAppBtn">💿 שמירת קובץ אפליקציה</button>
+          <button class="menu-item" id="loadSpouseBtn">👥 טעינת קובץ בן/בת זוג</button>
+          <button class="menu-item" id="exportBtn">📤 ייצוא נתונים</button>
+          <button class="menu-item" id="promptBtn">✏️ פרומפט לעריכה עתידית</button>
           <div class="menu-sep"></div>
           <button class="menu-item danger" id="clearBtn">🗑 ניקוי נתונים</button>
         </div>
@@ -412,6 +427,7 @@
     </div>
     <input type="file" id="fileInput" accept=".csv,text/csv" style="display:none">
     <input type="file" id="dataInput" accept=".json,application/json" style="display:none">
+    <input type="file" id="spouseInput" accept=".json,application/json" style="display:none">
   </div>
 </header>
 
@@ -434,6 +450,7 @@
         <h2>הפוליסות שלי</h2>
         <span class="count" id="listCount">0</span>
       </div>
+      <div class="filters" id="ownerFilters" style="display:none"></div>
       <div class="filters" id="filters"></div>
       <div class="plist" id="plist"></div>
     </div>
@@ -495,6 +512,23 @@
   </div>
 </div>
 
+<!-- Export Modal -->
+<div class="overlay" id="exportOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>ייצוא נתונים</h2>
+      <button class="icon-btn x" id="closeExport">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="export-opts">
+        <button class="export-opt" id="expCsv"><span class="eo-ico">📊</span><span><b>CSV</b><small>לפתיחה באקסל / גיליון אלקטרוני</small></span></button>
+        <button class="export-opt" id="expJson"><span class="eo-ico">🗂️</span><span><b>JSON (גיבוי מלא)</b><small>שומר רכיבים, תאריכים ובעלים — לטעינה חזרה</small></span></button>
+        <button class="export-opt" id="expPrint"><span class="eo-ico">🖨️</span><span><b>הדפסה / PDF</b><small>דרך חלון ההדפסה של הדפדפן</small></span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /#app -->
 
 <script src="https://artifactcdn.diabrowser.engineering/ajax/libs/Chart.js/chart.umd.js"></script>
@@ -528,6 +562,7 @@ const REFRESH_KEY = "insurance_tracker_refresh_v1";
 const REFRESH_INTERVAL_DAYS = 90;
 let policies = [];
 let filter = "all";
+let ownerFilter = "all";
 let chart = null;
 let expanded = new Set();
 
@@ -570,6 +605,9 @@ function policyCost(p) {
   }
   return Number(p.cost||0);
 }
+function visible() {
+  return ownerFilter === "all" ? policies : policies.filter(p=>(p.owner||"me")===ownerFilter);
+}
 
 function statusOf(p) {
   if (!p.end) return { key: "none", label: "ללא תאריך חידוש", cls: "none" };
@@ -582,12 +620,13 @@ function statusOf(p) {
 
 /* ---------- render ---------- */
 function renderStats() {
-  const total = policies.reduce((s,p)=>s+policyCost(p),0);
-  const active = policies.filter(p=>!p.end || daysUntil(p.end) >= 0).length;
-  const soon = policies.filter(p=>{if(!p.end)return false;const d=daysUntil(p.end);return d>=0&&d<=45;}).length;
-  const expired = policies.filter(p=>p.end && daysUntil(p.end) < 0).length;
+  const pols = visible();
+  const total = pols.reduce((s,p)=>s+policyCost(p),0);
+  const active = pols.filter(p=>!p.end || daysUntil(p.end) >= 0).length;
+  const soon = pols.filter(p=>{if(!p.end)return false;const d=daysUntil(p.end);return d>=0&&d<=45;}).length;
+  const expired = pols.filter(p=>p.end && daysUntil(p.end) < 0).length;
   document.getElementById("stats").innerHTML = `
-    <div class="stat teal"><div class="label">פוליסות פעילות</div><div class="value">${active}</div><div class="sub">מתוך ${policies.length} סה"כ</div></div>
+    <div class="stat teal"><div class="label">פוליסות פעילות</div><div class="value">${active}</div><div class="sub">מתוך ${pols.length} סה"כ</div></div>
     <div class="stat"><div class="label">עלות שנתית כוללת</div><div class="value">${nis(total)}</div><div class="sub">≈ ${nis(Math.round(total/12))} לחודש</div></div>
     <div class="stat amber"><div class="label">לחידוש בקרוב</div><div class="value">${soon}</div><div class="sub">ב-45 הימים הקרובים</div></div>
     <div class="stat coral"><div class="label">פג תוקף</div><div class="value">${expired}</div><div class="sub">${expired ? "דורש טיפול" : "הכל מעודכן"}</div></div>`;
@@ -601,11 +640,23 @@ function renderFilters() {
     html += `<span class="chip ${filter===k?'active':''}" data-f="${k}">${v.icon} ${v.label} (${counts[k]})</span>`;
   });
   document.getElementById("filters").innerHTML = html;
-  document.querySelectorAll(".chip").forEach(c => c.onclick = () => { filter = c.dataset.f; renderList(); renderFilters(); });
+  document.querySelectorAll("#filters .chip").forEach(c => c.onclick = () => { filter = c.dataset.f; renderList(); renderFilters(); });
+
+  // owner filter — shown only when more than one owner is present
+  const owners = [...new Set(policies.map(p=>p.owner||"me"))];
+  const ownerBar = document.getElementById("ownerFilters");
+  if (owners.length <= 1) { ownerBar.innerHTML = ""; ownerBar.style.display = "none"; return; }
+  ownerBar.style.display = "flex";
+  const oc = { all: policies.length, me: policies.filter(p=>(p.owner||"me")==="me").length, spouse: policies.filter(p=>p.owner==="spouse").length };
+  let oh = `<span class="chip owner ${ownerFilter==='all'?'active':''}" data-o="all">👨‍👩 שנינו (${oc.all})</span>`;
+  oh += `<span class="chip owner ${ownerFilter==='me'?'active':''}" data-o="me">שלי (${oc.me})</span>`;
+  oh += `<span class="chip owner ${ownerFilter==='spouse'?'active':''}" data-o="spouse">בן/בת זוג (${oc.spouse})</span>`;
+  ownerBar.innerHTML = oh;
+  ownerBar.querySelectorAll(".chip").forEach(c => c.onclick = () => { ownerFilter = c.dataset.o; renderList(); renderFilters(); });
 }
 
 function renderList() {
-  let list = policies.slice();
+  let list = visible().slice();
   if (filter !== "all") list = list.filter(p=>p.type===filter);
   list.sort((a,b)=>{
     const da = a.end ? daysUntil(a.end) : Infinity;
@@ -618,11 +669,13 @@ function renderList() {
     el.innerHTML = `<div class="empty"><div class="big">📭</div>אין פוליסות בקטגוריה זו.<br>לחצו על "פוליסה חדשה" כדי להוסיף.</div>`;
     return;
   }
+  const multiOwner = new Set(policies.map(p=>p.owner||"me")).size > 1;
   el.innerHTML = list.map(p => {
     const t = TYPES[p.type]; const s = statusOf(p);
     const comps = Array.isArray(p.components) ? p.components : [];
     const hasComps = comps.length > 1;
     const open = expanded.has(p.id);
+    const ownerTag = multiOwner ? ` <span class="powner ${p.owner==='spouse'?'spouse':'me'}">${p.owner==='spouse'?'בן/בת זוג':'שלי'}</span>` : "";
     const compRows = hasComps ? `<div class="pcomponents${open ? " open" : ""}" data-comp="${p.id}">
       ${comps.map(c=>`<div class="pcomp"><span class="pcomp-name">${esc(c.name)}</span><span class="pcomp-cost">${nis(c.cost)}</span></div>`).join("")}
     </div>` : "";
@@ -653,7 +706,7 @@ function renderList() {
 
 function renderChart() {
   const totals = {}; Object.keys(TYPES).forEach(t=>totals[t]=0);
-  policies.forEach(p=>totals[p.type]+=policyCost(p));
+  visible().forEach(p=>totals[p.type]+=policyCost(p));
   const labels = [], data = [], colors = [];
   Object.entries(TYPES).forEach(([k,v])=>{ if(totals[k]>0){ labels.push(v.label); data.push(totals[k]); colors.push(v.color); } });
   const legend = document.getElementById("legend");
@@ -676,7 +729,7 @@ function renderChart() {
 }
 
 function renderAlerts() {
-  const upcoming = policies
+  const upcoming = visible()
     .map(p=>({p, d:daysUntil(p.end)}))
     .filter(x=>x.d <= 45)
     .sort((a,b)=>a.d-b.d);
@@ -702,17 +755,18 @@ function renderAll() { renderStats(); renderFilters(); renderList(); renderChart
 function renderTimeline() {
   const body = document.getElementById("timelineBody");
   const panel = document.getElementById("timelinePanel");
-  panel.style.display = policies.length === 0 ? "none" : "";
-  if (policies.length === 0) return;
+  const pols = visible();
+  panel.style.display = pols.length === 0 ? "none" : "";
+  if (pols.length === 0) return;
   const now = new Date(); now.setHours(0,0,0,0);
   const windowDays = 365;
   const end = new Date(now); end.setDate(end.getDate() + windowDays);
 
-  const dated = policies.filter(p => p.end).map(p => ({ p, d: daysUntil(p.end) }));
+  const dated = pols.filter(p => p.end).map(p => ({ p, d: daysUntil(p.end) }));
   const inWindow = dated.filter(x => x.d >= 0 && x.d <= windowDays).sort((a,b)=>a.d-b.d);
   const later = dated.filter(x => x.d > windowDays);
   const expired = dated.filter(x => x.d < 0);
-  const undated = policies.filter(p => !p.end);
+  const undated = pols.filter(p => !p.end);
 
   // month ticks
   let months = "";
@@ -802,7 +856,27 @@ function saveDataFile(quiet) {
   toast("קובץ הנתונים נשמר: insurance-data.json", "ok");
 }
 
-function loadDataFile(file) {
+function ownerLabel(o) { return o === "spouse" ? "בן/בת זוג" : o === "me" ? "שלי" : ""; }
+
+function parsePolicies(arr, owner) {
+  return arr.filter(p => p && p.name).map(p => ({
+    id: p.id || id(),
+    name: String(p.name),
+    type: TYPES[p.type] ? p.type : "business",
+    company: p.company || "",
+    cost: Number(p.cost) || 0,
+    components: Array.isArray(p.components)
+      ? p.components.filter(c=>c && c.name).map(c=>({ name: String(c.name), cost: Number(c.cost)||0 }))
+      : undefined,
+    agent: p.agent || "",
+    start: p.start || "",
+    end: p.end || "",
+    policyNo: p.policyNo || "",
+    owner: p.owner || owner || "me",
+  }));
+}
+
+function loadDataFile(file, owner, append) {
   const reader = new FileReader();
   reader.onload = (e) => {
     let data;
@@ -810,23 +884,15 @@ function loadDataFile(file) {
     catch { toast("הקובץ אינו קובץ נתונים תקין (JSON).", "warn"); return; }
     const arr = Array.isArray(data) ? data : data.policies;
     if (!Array.isArray(arr)) { toast("לא נמצאו פוליסות בקובץ.", "warn"); return; }
-    const clean = arr.filter(p => p && p.name).map(p => ({
-      id: p.id || id(),
-      name: String(p.name),
-      type: TYPES[p.type] ? p.type : "business",
-      company: p.company || "",
-      cost: Number(p.cost) || 0,
-      components: Array.isArray(p.components)
-        ? p.components.filter(c=>c && c.name).map(c=>({ name: String(c.name), cost: Number(c.cost)||0 }))
-        : undefined,
-      agent: p.agent || "",
-      start: p.start || "",
-      end: p.end || "",
-      policyNo: p.policyNo || "",
-    }));
-    policies = clean;
+    const clean = parsePolicies(arr, owner || "me");
+    if (append) {
+      // avoid duplicating the same owner's file if loaded twice
+      policies = policies.filter(p => p.owner !== (owner || "spouse")).concat(clean);
+    } else {
+      policies = clean;
+    }
     save(); renderAll(); markRefreshed(); markClean();
-    toast(`נטענו ${clean.length} פוליסות מהקובץ.`, "ok");
+    toast(append ? `נוספו ${clean.length} פוליסות של בן/בת הזוג.` : `נטענו ${clean.length} פוליסות מהקובץ.`, "ok");
   };
   reader.onerror = () => toast("שגיאה בקריאת הקובץ.", "warn");
   reader.readAsText(file);
@@ -890,17 +956,29 @@ function renderRefresh() {
 
 /* ---------- actions ---------- */
 
-function exportData() {
-  const rows = [["שם","סוג","חברה","פרמיה שנתית","סוכן","התחלה","סיום","מספר פוליסה"]];
-  policies.forEach(p=>rows.push([p.name, TYPES[p.type].label, p.company, policyCost(p), p.agent, p.start, p.end, p.policyNo]));
+function exportCSV() {
+  const rows = [["שם","סוג","חברה","בעלים","פרמיה שנתית","סוכן","התחלה","סיום","מספר פוליסה"]];
+  policies.forEach(p=>rows.push([p.name, TYPES[p.type].label, p.company, ownerLabel(p.owner), policyCost(p), p.agent, p.start, p.end, p.policyNo]));
   const csv = "﻿" + rows.map(r=>r.map(c=>`"${String(c??"").replace(/"/g,'""')}"`).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  downloadBlob(csv, "text/csv;charset=utf-8;", "insurance-policies.csv");
+  toast("יוצא כ-CSV.", "ok");
+}
+function exportJSON() {
+  const payload = { app: "insurance-tracker", version: 2, savedAt: new Date().toISOString(), policies };
+  downloadBlob(JSON.stringify(payload, null, 2), "application/json;charset=utf-8", "insurance-data.json");
+  toast("יוצא כ-JSON (גיבוי מלא).", "ok");
+}
+function exportPrint() { closeExport(); window.print(); }
+function downloadBlob(content, type, filename) {
+  const blob = new Blob([content], { type });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "insurance-policies.csv";
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(a.href);
 }
+function openExport() { document.getElementById("exportOverlay").classList.add("show"); }
+function closeExport() { document.getElementById("exportOverlay").classList.remove("show"); }
 
 function clearData() {
   if (policies.length === 0 && !localStorage.getItem(STORE_KEY)) {
@@ -1118,15 +1196,24 @@ actionsMenu.querySelectorAll(".menu-item").forEach(b => b.addEventListener("clic
 window.addEventListener("beforeunload", (e) => {
   if (ONLINE && dirty) { e.preventDefault(); e.returnValue = ""; }
 });
-document.getElementById("downloadAppBtn").onclick = () => {
-  const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "insurance-app.html";
-  a.click();
-  URL.revokeObjectURL(a.href);
-  toast("קובץ האפליקציה הורד: insurance-app.html", "ok");
+document.getElementById("promptBtn").onclick = async () => {
+  const prompt = `יש לי אפליקציית מעקב ביטוחים (HTML בודד, עברית/RTL) שמתארחת ב-GitHub Pages.
+הקוד נמצא כאן: https://github.com/eranmz/my-insurance — קרא את index.html משם כמקור העדכני.
+
+תיאור:
+- אפליקציה צורכת-נתונים בלבד (בלי עריכה ידנית). הנתונים נטענים מקובץ insurance-data.json.
+- מבנה נתונים: מערך policies; לכל פוליסה name, type (car/home/health/business), company, cost, end, policyNo, ואופציונלית components[] (רכיבים עם name+cost שמסתכמים לעלות). owner אופציונלי לתיוג בן/בת זוג.
+- מצב אונליין (https) = "אפס שמירה": שום נתון לא נשמר בדפדפן, טוענים מקובץ בכל פתיחה. מצב מקומי (file://) שומר ב-localStorage.
+- רכיבים: לוח מחוונים, ציר זמן חידושים (12 חודשים, אייקונים+טולטיפ), התראות חידוש, תרשים עלויות, ייבוא CSV/הדבקה/JSON, ייצוא, פירוט רכיבים בהרחבה, קישורי "אזור אישי" לחברות, מסנן בעלים.
+
+אני רוצה לשנות: [כתוב כאן מה לשנות]`;
+  try {
+    await navigator.clipboard.writeText(prompt);
+    toast("הפרומפט הועתק ללוח — הדבק אותו בשיחה חדשה.", "ok");
+  } catch {
+    toast("לא ניתן להעתיק אוטומטית. פותח חלון להעתקה ידנית.", "warn");
+    window.prompt("העתק את הפרומפט הבא (Cmd+C):", prompt);
+  }
 };
 
 /* import wiring */
