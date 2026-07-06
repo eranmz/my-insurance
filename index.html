@@ -114,6 +114,8 @@
   .menu-item.danger { color: var(--coral); }
   .menu-item.danger:hover { background: #fbe4df; }
   .menu-sep { height: 1px; background: var(--line); margin: 6px 4px; }
+  .menu-label { font-size: 11.5px; font-weight: 700; color: var(--ink-soft); padding: 8px 12px 3px; }
+  .menu-item.sub { padding-inline-start: 22px; font-weight: 600; }
   .btn-harb {
     background: var(--gold); color: #fff; box-shadow: var(--shadow);
     text-decoration: none; display: inline-flex; align-items: center;
@@ -381,8 +383,11 @@
     .brand h1 { font-size: 24px; }
   }
   @media print {
-    header .brand-right, .filters, .prow-actions, .brand-right { display: none; }
+    header .brand-right, .filters, .prow-actions, .brand-right,
+    #refreshBanner, #loadDataBanner, .pchev, .portal-link, #toastWrap { display: none; }
     .policy { break-inside: avoid; }
+    .pcomponents { display: block !important; }
+    .timeline-panel { break-inside: avoid; }
   }
 </style>
 </head>
@@ -403,8 +408,14 @@
         <button class="btn btn-ghost" id="menuBtn" aria-haspopup="true" aria-expanded="false">פעולות ▾</button>
         <div class="menu" id="actionsMenu">
           <button class="menu-item" id="importBtn">📥 ייבוא מקובץ</button>
-          <button class="menu-item" id="exportBtn">📤 ייצוא CSV</button>
-          <button class="menu-item" id="downloadAppBtn">💿 שמירת קובץ אפליקציה</button>
+          <div class="menu-label">ייצוא</div>
+          <button class="menu-item sub" id="exportCsvBtn">📄 CSV (לאקסל)</button>
+          <button class="menu-item sub" id="exportJsonBtn">🧩 JSON (גיבוי מלא)</button>
+          <button class="menu-item sub" id="exportPrintBtn">🖨️ הדפסה / PDF</button>
+          <div class="menu-sep"></div>
+          <div class="menu-label">פרומפטים (העתקה ללוח)</div>
+          <button class="menu-item sub" id="promptBtn">✨ פרומפט להמשך פיתוח</button>
+          <button class="menu-item sub" id="dataPromptBtn">🔄 פרומפט להמרת נתונים</button>
           <div class="menu-sep"></div>
           <button class="menu-item danger" id="clearBtn">🗑 ניקוי נתונים</button>
         </div>
@@ -890,14 +901,29 @@ function renderRefresh() {
 
 /* ---------- actions ---------- */
 
-function exportData() {
+function exportCSV() {
+  if (policies.length === 0) { toast("אין נתונים לייצוא.", "info"); return; }
   const rows = [["שם","סוג","חברה","פרמיה שנתית","סוכן","התחלה","סיום","מספר פוליסה"]];
   policies.forEach(p=>rows.push([p.name, TYPES[p.type].label, p.company, policyCost(p), p.agent, p.start, p.end, p.policyNo]));
   const csv = "﻿" + rows.map(r=>r.map(c=>`"${String(c??"").replace(/"/g,'""')}"`).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  downloadBlob(csv, "insurance-policies.csv", "text/csv;charset=utf-8;");
+  toast("יוצא כקובץ CSV.", "ok");
+}
+function exportJSON() {
+  if (policies.length === 0) { toast("אין נתונים לייצוא.", "info"); return; }
+  const payload = { app: "insurance-tracker", version: 2, savedAt: new Date().toISOString(), policies };
+  downloadBlob(JSON.stringify(payload, null, 2), "insurance-data.json", "application/json;charset=utf-8");
+  toast("יוצא כקובץ JSON.", "ok");
+}
+function exportPrint() {
+  if (policies.length === 0) { toast("אין נתונים לייצוא.", "info"); return; }
+  window.print();
+}
+function downloadBlob(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "insurance-policies.csv";
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(a.href);
 }
@@ -1095,7 +1121,9 @@ function switchTab(tab) {
 }
 
 /* ---------- wire up ---------- */
-document.getElementById("exportBtn").onclick = exportData;
+document.getElementById("exportCsvBtn").onclick = exportCSV;
+document.getElementById("exportJsonBtn").onclick = exportJSON;
+document.getElementById("exportPrintBtn").onclick = exportPrint;
 document.getElementById("clearBtn").onclick = clearData;
 document.getElementById("quickSaveBtn").onclick = () => saveDataFile(true);
 const dataInput = document.getElementById("dataInput");
@@ -1118,15 +1146,56 @@ actionsMenu.querySelectorAll(".menu-item").forEach(b => b.addEventListener("clic
 window.addEventListener("beforeunload", (e) => {
   if (ONLINE && dirty) { e.preventDefault(); e.returnValue = ""; }
 });
-document.getElementById("downloadAppBtn").onclick = () => {
-  const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "insurance-app.html";
-  a.click();
-  URL.revokeObjectURL(a.href);
-  toast("קובץ האפליקציה הורד: insurance-app.html", "ok");
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(
+    () => toast("הפרומפט הועתק ללוח.", "ok"),
+    () => toast("לא ניתן להעתיק אוטומטית — נסה שוב.", "warn")
+  );
+}
+document.getElementById("promptBtn").onclick = () => {
+  copyToClipboard([
+    "אני רוצה להמשיך לפתח אפליקציית מעקב ביטוחים קיימת שלי.",
+    "",
+    "הקוד: אתר סטטי (HTML/CSS/JS בקובץ index.html אחד), מתארח ב-GitHub Pages ב-https://github.com/eranmz/my-insurance",
+    "אם יש לך גישה לאינטרנט — קרא את הקוד העדכני מ-https://raw.githubusercontent.com/eranmz/my-insurance/main/index.html",
+    "אם אין לך גישה לאינטרנט — בקש ממני להדביק את תוכן הקובץ index.html לפני שתתחיל.",
+    "",
+    "איך היא עובדת:",
+    "- מצב פרטי אונליין (אפס שמירה): שום נתון לא נשמר בדפדפן. הנתונים חיים בקובץ insurance-data.json שהמשתמש טוען/שומר ידנית.",
+    "- מבנה נתונים: מערך policies, כל פוליסה עם name, type (car/home/health/business), company, cost, components[] (רכיבים אופציונליים עם name+cost), start, end, policyNo.",
+    "- יש: לוח מחוונים, ציר זמן חידושים, התראות, ייבוא CSV/הדבקה/JSON, ייצוא CSV/JSON/הדפסה, הרחבת פוליסה להצגת רכיבים, קישור לאזור אישי לכל חברה, קישורים להר הביטוח.",
+    "",
+    "אחרי שתסיים, החזר לי את קובץ index.html המלא והמעודכן, כדי שאעלה אותו ל-GitHub.",
+    "",
+    "מה אני רוצה לשנות: [כתוב כאן את הבקשה]",
+  ].join("\n"));
+};
+document.getElementById("dataPromptBtn").onclick = () => {
+  copyToClipboard([
+    "המר לי דוח ביטוחים לקובץ JSON עבור אפליקציית מעקב הביטוחים שלי.",
+    "אצרף דוח 'הר הביטוח' (PDF/טקסט/אקסל). המר אותו למבנה המדויק הבא והחזר JSON תקין בלבד.",
+    "",
+    "מבנה הקובץ:",
+    '{ "app": "insurance-tracker", "version": 2, "savedAt": "<ISO date>", "policies": [ ... ] }',
+    "",
+    "כל פוליסה:",
+    '{ "name": "שם", "type": "car|home|health|business", "company": "חברה",',
+    '  "cost": <מספר שנתי>, "start": "YYYY-MM-DD", "end": "YYYY-MM-DD", "policyNo": "מספר",',
+    '  "components": [ { "name": "רכיב", "cost": <שנתי> } ]  // אופציונלי }',
+    "",
+    "כללי המרה (חשוב מאוד):",
+    "1. type: רכב/חובה/מקיף→car ; דירה/מבנה/תכולה→home ; בריאות/חיים/סיעוד/אכ\"ע→health ; אחר→business.",
+    "2. פרמיה חודשית → הכפל ב-12 לקבלת cost שנתי. ציין את הסכום החודשי בסוף ה-name (למשל 'חודשי 67.02').",
+    "3. פוליסות שחולקות אותו מספר פוליסה = פוליסה אחת עם components (כל כיסוי/כתב שירות = רכיב). אל תיצור שורות נפרדות.",
+    "4. כתבי שירות של ביטוח רכב מקיף = components של פוליסת המקיף.",
+    "5. אם אין תאריך חידוש (מתחדש/לא רלוונטי) — השאר end ריק (\"\").",
+    "6. השתמש בפורמט תאריך YYYY-MM-DD בלבד.",
+    "7. cost של פוליסה עם components יחושב אוטומטית מהרכיבים — אפשר להשמיט cost כשיש components.",
+    "",
+    "החזר רק את ה-JSON, בלי הסברים. שמור אותו כ-insurance-data.json וטען באפליקציה.",
+    "",
+    "[הדבק כאן את תוכן הדוח, או צרף אותו]",
+  ].join("\n"));
 };
 
 /* import wiring */
